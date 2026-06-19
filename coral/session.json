@@ -1,0 +1,20 @@
+{
+  "agentGraphRequest": {
+    "agents": [
+      {
+        "id": { "name": "helius-monitor", "version": "0.1.0", "registrySourceId": { "type": "local" } },
+        "name": "helius-monitor",
+        "provider": { "type": "local", "runtime": "docker" },
+        "proxies": {},
+        "options": {
+          "WALLET": { "type": "string", "value": "11111111111111111111111111111111" },
+          "AMOUNT_SOL": { "type": "f64", "value": 0.5 },
+          "RPC_URL": { "type": "string", "value": "https://api.devnet.solana.com" },
+          "WS_URL": { "type": "string", "value": "wss://api.devnet.solana.com" }
+        }
+      }
+    ]
+  },
+  "namespaceProvider": { "type": "create_if_not_exists", "namespaceRequest": { "name": "default" } },
+  "execution": { "mode": "immediate" }
+}

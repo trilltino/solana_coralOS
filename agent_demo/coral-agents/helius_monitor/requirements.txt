@@ -1,0 +1,2 @@
+# Thin deps — everything else uses the Python stdlib.
+websockets>=12.0

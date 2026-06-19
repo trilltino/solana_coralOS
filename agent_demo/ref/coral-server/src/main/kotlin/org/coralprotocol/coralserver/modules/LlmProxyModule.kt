@@ -1,0 +1,45 @@
+package org.coralprotocol.coralserver.modules
+
+import io.ktor.client.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.*
+import io.ktor.http.*
+import org.coralprotocol.coralserver.config.LlmProxyConfig
+import org.coralprotocol.coralserver.llmproxy.LlmProxyService
+import org.koin.core.qualifier.named
+import org.koin.dsl.module
+
+const val LLM_PROXY_HTTP_CLIENT = "llmProxyHttpClient"
+
+val llmProxyModule =
+    { eager: Boolean ->
+        module {
+            single(named(LLM_PROXY_HTTP_CLIENT)) {
+                val config = get<LlmProxyConfig>()
+                HttpClient(CIO) {
+                    if (config.retryMaxAttempts > 0) {
+                        install(HttpRequestRetry) {
+                            maxRetries = config.retryMaxAttempts
+                            retryIf { _, response ->
+                                response.status == HttpStatusCode.Conflict || response.status.value in 500..599
+                            }
+                            exponentialDelay(
+                                base = config.retryDelayExponent,
+                                baseDelayMs = config.retryBaseDelay.inWholeMilliseconds,
+                                maxDelayMs = config.retryMaxDelay.inWholeMilliseconds
+                            )
+                        }
+                    }
+                }
+            }
+            single(createdAtStart = eager) {
+                LlmProxyService(
+                    llmProxyConfig = get(),
+                    cloudConfig = get(),
+                    httpClient = get(named(LLM_PROXY_HTTP_CLIENT)),
+                    json = get(),
+                    logger = get(named(LOGGER_LLM_PROXY)),
+                )
+            }
+        }
+    }

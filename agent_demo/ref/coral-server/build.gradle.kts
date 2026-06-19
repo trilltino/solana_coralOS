@@ -1,0 +1,148 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+plugins {
+    kotlin("jvm") version "2.3.20"
+    kotlin("plugin.serialization") version "2.3.20"
+    application
+}
+
+application {
+    mainClass.set("org.coralprotocol.coralserver.MainKt")
+}
+
+group = "org.coralprotocol"
+version = providers.gradleProperty("version").get()
+
+repositories {
+    mavenCentral()
+    maven {
+        url = uri("https://central.sonatype.com/repository/maven-snapshots/")
+        name = "sonatypeSnapshots"
+    }
+
+    maven("https://github.com/CaelumF/schema-kenerator/raw/develop/maven-repo")
+    maven {
+        url = uri("https://coral-protocol.github.io/coral-escrow-distribution/")
+    }
+}
+
+dependencies {
+    testImplementation(kotlin("test"))
+    implementation("org.coralprotocol.payment:blockchain:0.1.1:all")
+    implementation("io.modelcontextprotocol:kotlin-sdk:0.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.7.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+    implementation("ch.qos.logback:logback-classic:1.5.32")
+    implementation("org.fusesource.jansi:jansi:2.4.2")
+    implementation("com.github.pgreze:kotlin-process:1.5.1")
+    implementation("io.github.z4kn4fein:semver:3.0.0")
+    implementation("me.saket.bytesize:bytesize:2.1.0")
+
+    val dockerVersion = "3.7.1"
+    implementation("com.github.docker-java:docker-java:$dockerVersion")
+    implementation("com.github.docker-java:docker-java-transport-httpclient5:$dockerVersion")
+
+    val ktorVersion = "3.4.3"
+    implementation(enforcedPlatform("io.ktor:ktor-bom:$ktorVersion"))
+    implementation("io.ktor:ktor-server-status-pages:${ktorVersion}")
+    implementation("io.ktor:ktor-server-auth:${ktorVersion}")
+    implementation("io.ktor:ktor-server-call-logging:${ktorVersion}")
+    testImplementation("io.ktor:ktor-server-test-host")
+
+    // kotest
+    val kotestVersion = "6.1.11"
+    testImplementation("io.kotest:kotest-runner-junit5:$kotestVersion")
+    testImplementation("io.kotest:kotest-assertions-core:$kotestVersion")
+    testImplementation("io.kotest:kotest-assertions-ktor:${kotestVersion}")
+    testImplementation("io.kotest:kotest-property:$kotestVersion")
+
+    // Ktor client dependencies
+    implementation("io.ktor:ktor-client-core:$ktorVersion")
+    implementation("io.ktor:ktor-client-logging")
+    implementation("io.ktor:ktor-client-content-negotiation")
+    implementation("io.ktor:ktor-client-cio-jvm")
+    implementation("io.ktor:ktor-client-websockets")
+    implementation("io.ktor:ktor-client-resources:$ktorVersion")
+
+    // Ktor server dependencies
+    implementation("io.ktor:ktor-server-core")
+    implementation("io.ktor:ktor-server-cio")
+    implementation("io.ktor:ktor-server-sse")
+    implementation("io.ktor:ktor-server-html-builder")
+    implementation("io.ktor:ktor-server-cors")
+    implementation("io.ktor:ktor-server-content-negotiation")
+    implementation("io.ktor:ktor-server-resources")
+    implementation("io.ktor:ktor-serialization-kotlinx-json")
+    implementation("io.ktor:ktor-server-websockets:${ktorVersion}")
+
+    // TOML serialization
+    implementation("dev.eav.tomlkt:tomlkt:0.6.0")
+
+    // OpenAPI
+    val ktorToolsVersion = "5.2.0"
+    implementation("io.github.smiley4:ktor-openapi:${ktorToolsVersion}")
+    implementation("io.github.smiley4:ktor-redoc:${ktorToolsVersion}")
+
+    val schemaVersion = "2.4.0.1"
+    implementation("io.github.smiley4:schema-kenerator-core:$schemaVersion")
+    implementation("io.github.smiley4:schema-kenerator-serialization:$schemaVersion")
+    implementation("io.github.smiley4:schema-kenerator-swagger:$schemaVersion")
+    implementation("io.github.smiley4:schema-kenerator-jsonschema:$schemaVersion")
+
+    // koin
+    val koinVersion = "4.2.1"
+    implementation(platform("io.insert-koin:koin-bom:$koinVersion"))
+    implementation("io.insert-koin:koin-core")
+    implementation("io.insert-koin:koin-ktor")
+    implementation("io.insert-koin:koin-test")
+
+    // hoplite
+    val hopliteVersion = "2.9.0"
+    implementation("com.sksamuel.hoplite:hoplite-core:${hopliteVersion}")
+    implementation("com.sksamuel.hoplite:hoplite-toml:${hopliteVersion}")
+
+    val koogVersion = "0.8.0"
+    api("ai.koog:koog-agents:$koogVersion")
+    api("ai.koog:agents-mcp:$koogVersion")
+}
+
+tasks.test {
+    useJUnitPlatform()
+    testLogging {
+        exceptionFormat = TestExceptionFormat.FULL
+        showExceptions = true
+        showStandardStreams = true
+    }
+
+    if (!project.hasProperty("benchmarkOpenAI")) {
+        exclude("org/coralprotocol/coralserver/llm/OpenAITest.class")
+    }
+
+    if (!project.hasProperty("benchmarkAnthropic")) {
+        exclude("org/coralprotocol/coralserver/llm/AnthropicTest.class")
+    }
+}
+
+tasks.withType<JavaExec>() {
+    standardInput = System.`in`
+}
+
+tasks.jar {
+    manifest {
+        attributes["Main-Class"] = "org.coralprotocol.coralserver.MainKt"
+    }
+    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
+}
+
+kotlin {
+    jvmToolchain(24)
+}
+val compileKotlin: KotlinCompile by tasks
+compileKotlin.compilerOptions {
+    freeCompilerArgs.set(listOf("-Xcontext-parameters"))
+}

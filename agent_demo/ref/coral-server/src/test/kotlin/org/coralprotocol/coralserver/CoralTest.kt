@@ -1,0 +1,266 @@
+@file:OptIn(KotestInternal::class)
+
+package org.coralprotocol.coralserver
+
+import dev.eav.tomlkt.Toml
+import io.kotest.common.KotestInternal
+import io.kotest.core.NamedTag
+import io.kotest.core.spec.RootTest
+import io.kotest.core.spec.style.FunSpec
+import io.kotest.core.test.TestCase
+import io.kotest.core.test.config.DefaultTestConfig
+import io.ktor.client.*
+import io.ktor.client.plugins.cookies.*
+import io.ktor.client.plugins.resources.*
+import io.ktor.client.plugins.sse.*
+import io.ktor.client.plugins.websocket.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
+import io.ktor.server.testing.*
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.plus
+import kotlinx.serialization.json.Json
+import org.coralprotocol.coralserver.agent.runtime.ApplicationRuntimeContext
+import org.coralprotocol.coralserver.config.*
+import org.coralprotocol.coralserver.logging.Logger
+import org.coralprotocol.coralserver.modules.*
+import org.coralprotocol.coralserver.modules.ktor.coralServerModule
+import org.coralprotocol.coralserver.session.LocalSessionManager
+import org.coralprotocol.coralserver.utils.TestProxy
+import org.coralprotocol.coralserver.utils.TestProxyConfiguration
+import org.koin.core.context.loadKoinModules
+import org.koin.core.context.startKoin
+import org.koin.core.context.stopKoin
+import org.koin.core.module.dsl.singleOf
+import org.koin.core.qualifier.named
+import org.koin.dsl.module
+import org.koin.environmentProperties
+import org.koin.test.KoinTest
+import org.slf4j.LoggerFactory
+import org.slf4j.event.Level
+import java.util.*
+import kotlin.time.Duration.Companion.minutes
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
+
+@Suppress("UNCHECKED_CAST")
+abstract class CoralTest(body: CoralTest.() -> Unit) : KoinTest, FunSpec(body as FunSpec.() -> Unit) {
+    init {
+        val invocations = 1
+        val invocationTimeout = 10.minutes
+
+        defaultTestConfig = DefaultTestConfig(
+            invocations = invocations,
+            invocationTimeout = invocationTimeout,
+
+            // the default max timeout is 10 minutes, for stress tests this should be increased to a number large
+            // enough to encompass all invocations
+            timeout = invocationTimeout * invocations
+        )
+    }
+
+    val authToken = UUID.randomUUID().toString()
+    val unitTestSecret = UUID.randomUUID().toString()
+    val logBufferSize = 1024
+
+    val openAIProxy = TestProxy.buildFromConfig(TestProxyConfiguration.OPENAI)
+    val anthropicProxy = TestProxy.buildFromConfig(TestProxyConfiguration.ANTHROPIC)
+
+    // Test cases that rely on proxies must use these functions with the `enabledIf` config instead of `enabled` because
+    // the config is evaluated before the above proxies are initialized
+    fun hasOpenAIProxy(testCase: TestCase) = openAIProxy != null
+    fun hasAnthropicProxy(testCase: TestCase) = anthropicProxy != null
+
+    fun HttpRequestBuilder.withAuthToken() {
+        headers.append(HttpHeaders.Authorization, "Bearer $authToken")
+    }
+
+    suspend inline fun <reified T : Any> HttpClient.authenticatedPost(
+        resource: T,
+        builder: HttpRequestBuilder.() -> Unit = {}
+    ): HttpResponse {
+        return post(resource) {
+            withAuthToken()
+            contentType(ContentType.Application.Json)
+            builder()
+        }
+    }
+
+    suspend inline fun <reified T : Any> HttpClient.authenticatedGet(
+        resource: T,
+        builder: HttpRequestBuilder.() -> Unit = {}
+    ): HttpResponse {
+        return get(resource) {
+            withAuthToken()
+            contentType(ContentType.Application.Json)
+            builder()
+        }
+    }
+
+    suspend inline fun <reified T : Any> HttpClient.authenticatedDelete(
+        resource: T,
+        builder: HttpRequestBuilder.() -> Unit = {}
+    ): HttpResponse {
+        return delete(resource) {
+            withAuthToken()
+            contentType(ContentType.Application.Json)
+            builder()
+        }
+    }
+
+    override fun add(test: RootTest) {
+        super.add(
+            RootTest(
+                name = test.name,
+                test = {
+                    val testLogger = Logger(logBufferSize, LoggerFactory.getLogger("CoralTest"))
+                    val prodLogger = Logger(logBufferSize, LoggerFactory.getLogger("CoralProd"))
+                    val backgroundJob = Job()
+
+                    try {
+                        runTestApplication {
+                            startKoin {
+                                environmentProperties()
+                                modules(
+                                    module {
+                                        singleOf(::ApplicationRuntimeContext)
+                                        single {
+                                            RootConfig(
+                                                // port for testing is zero
+                                                networkConfig = NetworkConfig(
+                                                    bindPort = 0u
+                                                ),
+                                                paymentConfig = PaymentConfig(
+                                                    wallets = listOf(
+                                                        Wallet.Solana(
+                                                            name = "fake test wallet",
+                                                            cluster = SolanaCluster.DEV_NET,
+                                                            keypairPath = "fake-test-wallet.json",
+                                                            walletAddress = "this is not a real wallet address"
+                                                        )
+                                                    ),
+                                                    remoteAgentWalletName = "fake test wallet"
+                                                ),
+                                                registryConfig = RegistryConfig(
+                                                    includeDebugAgents = true,
+                                                    includeCoralHomeAgents = false,
+                                                    localAgents = listOf()
+                                                ),
+                                                authConfig = AuthConfig(
+                                                    keys = setOf(authToken)
+                                                ),
+                                                debugConfig = DebugConfig(
+                                                    additionalDockerEnvironment = mapOf("UNIT_TEST_SECRET" to unitTestSecret),
+                                                    additionalExecutableEnvironment = mapOf("UNIT_TEST_SECRET" to unitTestSecret)
+                                                ),
+                                                loggingConfig = LoggingConfig(
+                                                    logBufferSize = logBufferSize.toUInt(),
+                                                    logToFileEnabled = false,
+                                                    consoleLogLevel = if (test.config?.tags?.contains(NamedTag("noisy")) == true) {
+                                                        Level.WARN
+                                                    } else if (test.config?.tags?.contains(NamedTag("debug")) == true) {
+                                                        Level.TRACE
+                                                    } else {
+                                                        Level.INFO
+                                                    }
+                                                ),
+                                                llmProxyConfig = LlmProxyConfig(
+                                                    providers = listOf(
+                                                        openAIProxy,
+                                                        anthropicProxy
+                                                    ).mapNotNull { it?.providerConfig }
+                                                ),
+                                            )
+                                        }
+                                    },
+                                    configModuleParts,
+                                    loggingModule,
+                                    module {
+                                        single<Logger>(named(LOGGER_ROUTES)) { prodLogger }
+                                        single<Logger>(named(LOGGER_CONFIG)) { prodLogger }
+                                        single<Logger>(named(LOGGER_LOCAL_SESSION)) { prodLogger }
+
+                                        single<Logger>(named(LOGGER_LOG_API)) { testLogger }
+                                        single<Logger>(named(LOGGER_TEST)) { testLogger }
+                                        single<Logger>(named(LOGGER_LLM_PROXY)) { prodLogger }
+                                    },
+                                    llmProxyModule(false),
+                                    module {
+                                        single {
+                                            Json {
+                                                encodeDefaults = true
+                                                prettyPrint = true
+                                                explicitNulls = false
+                                            }
+                                        }
+                                        single {
+                                            Toml {
+                                                ignoreUnknownKeys = true
+                                            }
+                                        }
+                                        single {
+                                            createClient {
+                                                install(Resources)
+                                                install(WebSockets)
+                                                install(SSE)
+                                                install(HttpCookies)
+                                                install(ClientContentNegotiation) {
+                                                    json(get(), contentType = ContentType.Application.Json)
+                                                }
+                                            }
+                                        }
+                                    },
+                                    blockchainModule,
+                                    agentModule,
+                                    module {
+                                        single {
+                                            LocalSessionManager(
+                                                blockchainService = get(),
+                                                jupiterService = get(),
+                                                httpClient = get(),
+                                                config = get(),
+                                                json = get(),
+                                                managementScope = this@RootTest,
+
+                                                // if this is true, exceptions thrown (including assertions) in an agent's runtime will not exit a test
+                                                // it also requires that session's coroutine scopes are canceled
+                                                supervisedSessions = false,
+
+                                                logger = get(named(LOGGER_LOCAL_SESSION))
+                                            )
+                                        }
+                                        single(named(WEBSOCKET_COROUTINE_SCOPE_NAME)) {
+                                            this@RootTest + backgroundJob
+                                        }
+                                        single(named(AGENT_WATCHER_COROUTINE_SCOPE_NAME)) {
+                                            this@RootTest + backgroundJob
+                                        }
+                                    }
+                                )
+                                createEagerInstances()
+                            }
+
+                            application {
+                                coralServerModule(true)
+                            }
+                            startApplication()
+
+                            loadKoinModules(module { single { application } })
+
+                            test.test(this@RootTest)
+                        }
+                    } finally {
+                        stopKoin()
+                        backgroundJob.cancel()
+                    }
+                },
+                type = test.type,
+                source = test.source,
+                config = test.config,
+                factoryId = test.factoryId,
+                xmethod = test.xmethod,
+            )
+        )
+    }
+}
