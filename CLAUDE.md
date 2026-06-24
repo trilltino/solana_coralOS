@@ -4,48 +4,66 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Repo Is
 
-A monorepo for a Solana payment infrastructure project. The root-level README and CONTRIBUTING.md describe `pay` — a CLI tool that handles HTTP 402 payment challenges (MPP and x402 protocols) with stablecoin signing. The active code in this working directory is the **agent_demo** and **coral-server** components.
+A monorepo for a Solana payment infrastructure project. The root-level README and CONTRIBUTING.md describe `pay` — a CLI tool that handles HTTP 402 payment challenges (MPP and x402 protocols) with stablecoin signing. The active code in this working directory is the **desktop** and **api** components.
 
 ## Repo Layout
 
 | Directory | Purpose |
 |-----------|---------|
-| `agent_demo/` | Tauri desktop app — multi-agent trading desk demo |
-| `agent_demo/agent-core/` | Rust library: agent lifecycle, workflows, messaging, Solana Pay, Jito |
-| `agent_demo/src-tauri/` | Tauri backend: Tauri IPC commands, CoralOS HTTP client |
-| `agent_demo/src-ui/` | React frontend: Vite + Tailwind + @xyflow/react + zustand |
-| `coral-server/` | Axum REST API wrapping `agent-core` (runs on port 8080) |
-| `ref/` | Reference implementations (payment debugger, coral-server) — read-only reference |
+| `desktop/` | Tauri desktop app — multi-agent developer dashboard |
+| `desktop/agent-core/` | Rust library: agent lifecycle, workflows, messaging, Solana Pay, Jito |
+| `desktop/src-tauri/` | Tauri backend: Tauri IPC commands, CoralOS HTTP client |
+| `desktop/src-ui/` | React frontend: Vite + Tailwind + @xyflow/react + zustand |
+| `api/` | Axum REST API wrapping `agent-core` (runs on port 8080) |
+| `api-ts/` | Node.js/Express REST API wrapping TypeScript strategies (runs on port 8081) |
+| `sdk/` | TypeScript SDK — `agent-core-ts` mirrors Rust agent-core; `sdk/` is the CoralClient HTTP wrapper |
+| `web/` | Next.js consumer marketplace — Phantom wallet payment flow |
+| `claude-skills/` | Claude Code skills for this project |
+| `docs/` | Design documents and CoralOS reference config |
+| `ref/` | Reference implementations (payment debugger) — read-only |
 
 ## Commands
 
-### agent_demo (Tauri)
+### desktop (Tauri)
 
 ```sh
 # Install UI dependencies
-cd agent_demo/src-ui && npm install
+cd desktop/src-ui && npm install
 
 # Build agent-core
-cd agent_demo && cargo build
+cd desktop && cargo build
 
 # Run in dev mode (starts Vite dev server + Tauri)
-cd agent_demo/src-tauri && cargo tauri dev
+cd desktop/src-tauri && cargo tauri dev
 ```
 
-### coral-server (Axum API)
+### api (Axum REST API — Rust)
 
 ```sh
 # Run the server (listens on http://0.0.0.0:8080)
-cd coral-server && cargo run
+cd api && cargo run
 
 # Build
-cd coral-server && cargo build --release
+cd api && cargo build --release
 ```
 
-### Rust workspace (agent_demo)
+### api-ts (Express REST API — TypeScript)
 
 ```sh
-cd agent_demo
+# Install dependencies (only needed once)
+cd api-ts && npm install
+
+# Run in dev mode with hot reload
+cd api-ts && npm run dev
+
+# Server listens on http://0.0.0.0:8081
+# Set NEXT_PUBLIC_CORAL_SERVER=http://localhost:8081 in web/.env.local to use it
+```
+
+### Rust workspace (desktop)
+
+```sh
+cd desktop
 
 cargo build              # debug build
 cargo build --release    # release build
@@ -60,7 +78,7 @@ cargo fmt                # auto-format
 
 ### agent-core (Rust library)
 
-The central library used by both `src-tauri` and `coral-server`. Key modules:
+The central library used by both `src-tauri` and `api`. Key modules:
 
 - **`agent.rs` / `AgentState`** — An agent holds a pluggable `Strategy` and an action log. Strategies are `async_trait` objects (`RpcPollStrategy`, `IdleStrategy`, Solana Pay strategies).
 - **`manager.rs` / `AgentManager`** — Creates, stores, and drives multiple agents. Uses `BTreeMap` keyed by string ID. Also owns `MessageBus`, `SharedState`, and `WorkflowEngine`.
@@ -76,13 +94,21 @@ The central library used by both `src-tauri` and `coral-server`. Key modules:
 - **`main.rs`** — All `#[tauri::command]` handlers. Wraps `AgentManager` in `Mutex<AgentManager>` and `CoralOSClient` in `Mutex<CoralOSClient>`.
 - **`coralos.rs`** — Lightweight HTTP client that talks to a remote CoralOS server (session/agent APIs via `reqwest`).
 
-### coral-server (Axum REST API)
+### api (Axum REST API)
 
 Exposes `agent-core` over HTTP at `/api/v1/`:
 - `/agents` — CRUD for agents
 - `/workflows` — Workflow management
 - `/messages` — Message bus access
-- `/state` — Shared state read/write
+- `/shared-state` — Shared state read/write
+- `/payments` — Payment flow records
+- `/swarm` — CoralOS swarm proxy
+- `/weather` — Example: WeatherStrategy endpoint
+
+### api-ts (Express REST API)
+
+TypeScript mirror of `api` — same REST surface, runs strategies from `sdk/agent-core-ts`.
+Students swap backends by changing `NEXT_PUBLIC_CORAL_SERVER`.
 
 ### src-ui (React frontend)
 

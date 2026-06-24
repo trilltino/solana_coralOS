@@ -53,7 +53,7 @@ export default function PayPage() {
       const client = getClient()
       try {
         await client.setState(`request:${agentId}`, prompt.trim(), 'web-ui')
-      } catch { /* coral-server may not be running */ }
+      } catch { /* api server may not be running */ }
 
       const tx = new Transaction().add(
         SystemProgram.transfer({

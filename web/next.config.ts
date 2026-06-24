@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
     // Alias the SDK package name so imports from the source work in SSR too
     config.resolve.alias = {
       ...config.resolve.alias,
-      '@pay/sdk': path.resolve(__dirname, '../typescript_sdk/sdk/src'),
+      '@pay/sdk': path.resolve(__dirname, '../sdk/sdk/src'),
     }
     return config
   },

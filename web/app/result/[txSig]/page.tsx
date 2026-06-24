@@ -124,9 +124,9 @@ export default function ResultPage() {
             <div className="space-y-3">
               <p className="text-red-400 text-xs">{data?.error ?? fetchError}</p>
               <p className="text-gray-500 text-xs">
-                Start coral-server:{' '}
+                Start the API server:{' '}
                 <span className="font-mono bg-[#0d0d15] px-1.5 py-0.5 rounded text-gray-400">
-                  cd coral-server && cargo run
+                  cd api && cargo run
                 </span>
               </p>
             </div>

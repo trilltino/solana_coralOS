@@ -60,10 +60,10 @@ async fn main() -> anyhow::Result<()> {
         .nest("/api/v1/agents", api::agents::routes())
         .nest("/api/v1/workflows", api::workflows::routes())
         .nest("/api/v1/messages", api::messaging::routes())
-        .nest("/api/v1/state", api::shared_state::routes())
+        .nest("/api/v1/shared-state", api::shared_state::routes())
         .nest("/api/v1/solana-pay", api::solana_pay::routes())
-        .nest("/api/v1/pay-demo", api::pay_demo::routes())
-        .nest("/api/v1/coralos", api::coralos::routes())
+        .nest("/api/v1/payments", api::pay_demo::routes())
+        .nest("/api/v1/swarm", api::coralos::routes())
         .nest("/api/v1/weather", api::weather::routes())
         .layer(
             CorsLayer::new()

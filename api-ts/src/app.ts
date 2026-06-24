@@ -1,7 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import { manager, makeStrategy } from './registry.js'
-import { WeatherStrategy } from '../../typescript_sdk/agent-core-ts/src/strategies/weather.js'
+import { WeatherStrategy } from '../../sdk/agent-core-ts/src/strategies/weather.js'
 
 const app = express()
 app.use(cors())
@@ -66,18 +66,17 @@ app.post('/api/v1/agents/:id/handle', async (req, res) => {
 
 // ── Shared State ────────────────────────────────────────────────────────────
 
-app.get('/api/v1/state', (_req, res) => {
+app.get('/api/v1/shared-state', (_req, res) => {
   res.json(manager.state.getAll())
 })
 
-// Matches coral-server: POST /api/v1/state/:key  body: { value, changed_by }
-app.post('/api/v1/state/:key', (req, res) => {
+app.post('/api/v1/shared-state/:key', (req, res) => {
   const { value, changed_by = 'api' } = req.body as { value: unknown; changed_by?: string }
   manager.state.set(req.params.key, value, changed_by)
   res.json(true)
 })
 
-app.delete('/api/v1/state/:key', (req, res) => {
+app.delete('/api/v1/shared-state/:key', (req, res) => {
   manager.state.delete(req.params.key, 'api')
   res.json(true)
 })

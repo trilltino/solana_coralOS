@@ -4,7 +4,7 @@
  * Drop-in replacement for `@tauri-apps/api/core` invoke.
  * When running inside Tauri (window.__TAURI__ present) all calls go through
  * the Tauri IPC bridge. When running as a plain web app they are routed to
- * coral-server (default http://localhost:8080).
+ * the api server (default http://localhost:8080).
  *
  * Usage in App.tsx:
  *   import { invoke, IS_TAURI, listenEvent } from "./transport"
@@ -120,13 +120,13 @@ async function httpDispatch<T>(cmd: string, args: Args): Promise<T> {
 
     // ── Shared State ─────────────────────────────────────────────────────────
     case 'get_all_shared_state':
-      return httpGet('/api/v1/state')
+      return httpGet('/api/v1/shared-state')
 
     case 'get_state_history':
-      return httpGet('/api/v1/state/history')
+      return httpGet('/api/v1/shared-state/history')
 
     case 'set_shared_state':
-      return httpPost(`/api/v1/state/${args.key}`, {
+      return httpPost(`/api/v1/shared-state/${args.key}`, {
         value: args.value,
         changed_by: args.changedBy,
       })
@@ -190,33 +190,33 @@ async function httpDispatch<T>(cmd: string, args: Args): Promise<T> {
 
     // ── Pay Demo ─────────────────────────────────────────────────────────────
     case 'complete_sale':
-      return httpPost('/api/v1/pay-demo/complete-sale', {
+      return httpPost('/api/v1/payments/complete-sale', {
         seller_id: args.sellerId,
         buyer_id: args.buyerId,
         tx_signature: args.txSignature ?? null,
       })
 
     case 'get_payment_flows':
-      return httpGet('/api/v1/pay-demo/flows')
+      return httpGet('/api/v1/payments/flows')
 
-    // ── CoralOS ──────────────────────────────────────────────────────────────
+    // ── CoralOS / Swarm ───────────────────────────────────────────────────────
     case 'coralos_set_url':
-      return httpPut('/api/v1/coralos/config', { url: args.url })
+      return httpPut('/api/v1/swarm/config', { url: args.url })
 
     case 'coralos_set_token':
-      return httpPut('/api/v1/coralos/config', { token: args.token })
+      return httpPut('/api/v1/swarm/config', { token: args.token })
 
     case 'coralos_list_sessions':
-      return httpGet(`/api/v1/coralos/sessions/${args.namespace}`)
+      return httpGet(`/api/v1/swarm/sessions/${args.namespace}`)
 
     case 'coralos_mcp_join':
-      return httpPost('/api/v1/coralos/mcp/join', {
+      return httpPost('/api/v1/swarm/mcp/join', {
         connection_url: (args as Record<string, string>).connectionUrl,
         agent_name: (args as Record<string, string>).agentName,
       })
 
     case 'coralos_mcp_status':
-      return httpGet(`/api/v1/coralos/mcp/status/${(args as Record<string, string>).name}`)
+      return httpGet(`/api/v1/swarm/mcp/status/${(args as Record<string, string>).name}`)
 
     // ── Weather agent ─────────────────────────────────────────────────────────
     case 'weather_query':
