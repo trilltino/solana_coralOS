@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Agent Economy — Checkout</title>
+<title>Agent Economy — Demo</title>
 <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
 <style>
   :root{
@@ -20,62 +20,54 @@
       var(--bg);
     -webkit-font-smoothing:antialiased;
   }
-  .wrap{max-width:480px;margin:0 auto;padding:40px 20px 64px}
-
+  .wrap{max-width:540px;margin:0 auto;padding:40px 20px 64px}
   header{display:flex;align-items:center;gap:10px;margin-bottom:6px}
-  .logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--brand),var(--green));
-    box-shadow:0 6px 22px rgba(153,69,255,.45);flex:none}
+  .logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--brand),var(--green));box-shadow:0 6px 22px rgba(153,69,255,.45);flex:none}
   h1{font-size:19px;font-weight:680;margin:0;letter-spacing:-.01em}
-  .badge{margin-left:auto;font-size:11px;font-weight:600;color:var(--green);
-    background:rgba(20,241,149,.10);border:1px solid rgba(20,241,149,.25);border-radius:999px;padding:3px 10px}
-  .tag{font-size:11px;color:var(--muted-2);background:#1b1b26;border:1px solid var(--line);border-radius:999px;padding:3px 9px}
-  .sub{color:var(--muted);margin:8px 0 26px;font-size:13.5px}
+  .badge{margin-left:auto;font-size:11px;font-weight:600;color:var(--green);background:rgba(20,241,149,.10);border:1px solid rgba(20,241,149,.25);border-radius:999px;padding:3px 10px}
+  .sub{color:var(--muted);margin:8px 0 22px;font-size:13.5px}
 
-  .card{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--line);
-    border-radius:16px;padding:20px;margin-bottom:14px;box-shadow:0 1px 0 rgba(255,255,255,.02) inset}
+  .tabs{display:flex;gap:5px;margin-bottom:18px;background:#13131c;border:1px solid var(--line);border-radius:13px;padding:5px}
+  .tabs button{flex:1;background:transparent;color:var(--muted);font-weight:600;font-size:13.5px;padding:10px;border:0;border-radius:9px;cursor:pointer;transition:.15s}
+  .tabs button.active{background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff}
+
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:14px}
   .label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2);margin-bottom:11px;font-weight:600}
-
-  button{font:inherit;font-weight:600;cursor:pointer;border:0;border-radius:11px;width:100%;padding:13px;
-    color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));transition:transform .06s ease,opacity .2s,filter .2s}
-  button:hover:not(:disabled){filter:brightness(1.08)}
-  button:active:not(:disabled){transform:translateY(1px)}
-  button:disabled{opacity:.55;cursor:default}
+  button.cta{font:inherit;font-weight:600;cursor:pointer;border:0;border-radius:11px;width:100%;padding:13px;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));transition:.15s}
+  button.cta:hover:not(:disabled){filter:brightness(1.08)} button.cta:disabled{opacity:.55;cursor:default}
   button.ghost{background:#1c1c28;border:1px solid var(--line)}
 
   .who{display:none;align-items:center;gap:9px;margin-top:12px;font-size:13px}
   .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}
-  .who b{font-variant-numeric:tabular-nums}
-
-  .svc{display:flex;flex-direction:column;gap:8px;margin-bottom:6px}
-  .opt{display:flex;align-items:center;gap:12px;padding:12px 13px;border:1px solid var(--line);border-radius:12px;
-    background:#0e0e15;cursor:pointer;transition:border-color .15s,background .15s}
-  .opt:hover{border-color:#34344a}
-  .opt.sel{border-color:var(--brand);background:rgba(153,69,255,.08)}
+  .svc{display:flex;flex-direction:column;gap:8px}
+  .opt{display:flex;align-items:center;gap:12px;padding:12px 13px;border:1px solid var(--line);border-radius:12px;background:#0e0e15;cursor:pointer;transition:.15s}
+  .opt:hover{border-color:#34344a} .opt.sel{border-color:var(--brand);background:rgba(153,69,255,.08)}
   .opt .ic{width:30px;height:30px;border-radius:8px;background:#1b1b27;display:grid;place-items:center;font-size:15px;flex:none}
-  .opt .t{font-weight:600;font-size:14px}
-  .opt .d{font-size:12px;color:var(--muted)}
+  .opt .t{font-weight:600;font-size:14px} .opt .d{font-size:12px;color:var(--muted)}
   .opt input{display:none}
   .opt .chk{margin-left:auto;width:18px;height:18px;border-radius:50%;border:2px solid #34344a;flex:none}
   .opt.sel .chk{border-color:var(--brand);background:var(--brand);box-shadow:inset 0 0 0 3px #0e0e15}
-
   .quote{display:none;margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
   .row{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted);padding:5px 0}
   .row b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
 
   .timeline .step{display:flex;gap:11px;padding:9px 0;font-size:13px;align-items:flex-start}
-  .timeline .step .bullet{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);flex:none;margin-top:1px;
-    display:grid;place-items:center;font-size:10px;color:var(--green)}
-  .timeline .step.ok .bullet{border-color:var(--green);color:var(--green)}
+  .timeline .step .bullet{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);flex:none;margin-top:1px;display:grid;place-items:center;font-size:10px;color:var(--green)}
   .timeline .step.err .bullet{border-color:#ff6b6b;color:#ff6b6b}
-  .timeline .step .body{min-width:0}
-  .timeline .step .head{font-weight:600}
   .timeline .step .meta{color:var(--muted);font-size:12px;word-break:break-all}
-  a{color:var(--brand);text-decoration:none}
-  a:hover{text-decoration:underline}
-  pre{background:#0a0a10;border:1px solid var(--line);border-radius:11px;padding:13px;margin:8px 0 0;
-    overflow:auto;font-size:12.5px;color:var(--green);white-space:pre-wrap;word-break:break-word;
-    font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-  .foot{color:var(--muted-2);font-size:12px;text-align:center;margin-top:22px;line-height:1.7}
+
+  /* autonomous conversation */
+  .tally{font-size:12.5px;color:var(--muted);margin:0 0 12px;display:flex;align-items:center;gap:7px}
+  .tally .g{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+  .feed{display:flex;flex-direction:column;max-height:52vh;overflow:auto}
+  .bubble{max-width:86%;padding:9px 13px;border-radius:13px;margin:6px 0;font-size:13.5px;line-height:1.45}
+  .bubble .from{font-size:11px;color:var(--muted-2);margin-bottom:3px;font-weight:600}
+  .bubble.buyer{background:rgba(153,69,255,.10);border:1px solid rgba(153,69,255,.22);margin-right:auto;border-bottom-left-radius:4px}
+  .bubble.seller{background:#13131c;border:1px solid var(--line);margin-left:auto;border-bottom-right-radius:4px}
+
+  a{color:var(--brand);text-decoration:none} a:hover{text-decoration:underline}
+  pre{background:#0a0a10;border:1px solid var(--line);border-radius:9px;padding:11px;margin:7px 0 0;overflow:auto;font-size:12px;color:var(--green);white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,Menlo,monospace}
+  .foot{color:var(--muted-2);font-size:12px;text-align:center;margin-top:22px}
 </style>
 </head>
 <body>
@@ -85,127 +77,154 @@
     <h1>Agent Economy</h1>
     <span class="badge">● devnet</span>
   </header>
-  <p class="sub">Pay a seller <b style="color:var(--text)">agent</b> in SOL with Phantom. Same seller, same on-chain
-    settlement the autonomous buyer uses — you're just the human front door.</p>
+  <p class="sub">A seller <b style="color:var(--text)">agent</b> sells a service for SOL. The buyer is an
+    <b style="color:var(--text)">agent</b> or a <b style="color:var(--text)">human</b> — same on-chain settlement, two front doors.</p>
 
-  <div class="card">
-    <div class="label">1 · Wallet</div>
-    <button id="connect" class="ghost">Connect Phantom</button>
-    <div id="who" class="who"><span class="dot"></span><span>Connected</span><b id="addr" style="margin-left:auto"></b></div>
+  <div class="tabs">
+    <button id="tabAuto" class="active" onclick="showTab('auto')">🤖 Autonomous</button>
+    <button id="tabHuman" onclick="showTab('human')">🙋 Checkout</button>
   </div>
 
-  <div class="card" id="orderCard" style="opacity:.45;pointer-events:none">
-    <div class="label">2 · Choose a service</div>
-    <div class="svc" id="svc">
-      <label class="opt sel"><span class="ic">📈</span><span><span class="t">Jupiter quote</span><br><span class="d">live SOL→USDC swap price</span></span><input type="radio" name="s" value="jupiter" checked><span class="chk"></span></label>
-      <label class="opt"><span class="ic">🪙</span><span><span class="t">CoinGecko price</span><br><span class="d">live SOL price in USD</span></span><input type="radio" name="s" value="coingecko"><span class="chk"></span></label>
-      <label class="opt"><span class="ic">🧠</span><span><span class="t">Claude inference</span><br><span class="d">an AI completion</span></span><input type="radio" name="s" value="inference"><span class="chk"></span></label>
+  <!-- ── AUTONOMOUS (agent → agent) ── -->
+  <section id="auto">
+    <div class="card">
+      <div class="label">Agent → agent</div>
+      <p style="margin:0 0 14px;font-size:13.5px;color:var(--muted)">No human. The buyer agent requests a service,
+        decides to pay, settles in SOL on-chain, and gets the data — on a loop. Watch the conversation:</p>
+      <button id="runAuto" class="cta">Run the agent↔agent demo</button>
+      <div class="tally" id="tally" style="margin-top:14px;display:none"></div>
     </div>
-    <div class="quote" id="quote">
-      <div class="row"><span>Pay to (seller)</span><b id="recipient">—</b></div>
-      <div class="row"><span>Amount</span><b id="amount">—</b></div>
+    <div class="card" id="feedCard" style="display:none">
+      <div class="label">Live conversation</div>
+      <div class="feed" id="feed"></div>
     </div>
-    <button id="buy" style="margin-top:14px">Request &amp; Pay</button>
-  </div>
+  </section>
 
-  <div class="card timeline" id="logCard" style="display:none">
-    <div class="label">Activity</div>
-    <div id="log"></div>
-  </div>
+  <!-- ── HUMAN CHECKOUT (Phantom) ── -->
+  <section id="human" hidden>
+    <div class="card">
+      <div class="label">1 · Wallet</div>
+      <button id="connect" class="cta ghost">Connect Phantom</button>
+      <div id="who" class="who"><span class="dot"></span><span>Connected</span><b id="addr" style="margin-left:auto"></b></div>
+    </div>
+    <div class="card" id="orderCard" style="opacity:.45;pointer-events:none">
+      <div class="label">2 · Choose a service</div>
+      <div class="svc" id="svc">
+        <label class="opt sel"><span class="ic">📈</span><span><span class="t">Jupiter quote</span><br><span class="d">live SOL→USDC swap price</span></span><input type="radio" name="s" value="jupiter" checked><span class="chk"></span></label>
+        <label class="opt"><span class="ic">🪙</span><span><span class="t">CoinGecko price</span><br><span class="d">live SOL price in USD</span></span><input type="radio" name="s" value="coingecko"><span class="chk"></span></label>
+        <label class="opt"><span class="ic">🧠</span><span><span class="t">Claude inference</span><br><span class="d">an AI completion</span></span><input type="radio" name="s" value="inference"><span class="chk"></span></label>
+      </div>
+      <div class="quote" id="quote">
+        <div class="row"><span>Pay to (seller)</span><b id="recipient">—</b></div>
+        <div class="row"><span>Amount</span><b id="amount">—</b></div>
+      </div>
+      <button id="buy" class="cta" style="margin-top:14px">Request &amp; Pay</button>
+    </div>
+    <div class="card timeline" id="logCard" style="display:none">
+      <div class="label">Activity</div><div id="log"></div>
+    </div>
+  </section>
 
-  <p class="foot">request → <b style="color:var(--muted)">PAYMENT_REQUIRED</b> → you pay on-chain → seller verifies → delivers<br>
-    every payment is a real devnet transaction</p>
+  <p class="foot">request → PAYMENT_REQUIRED → pay on-chain → verify → deliver · every payment a real devnet tx</p>
 </div>
 
 <script>
-const SERVER = location.origin            // the bridge serves this page → same origin
+const SERVER = location.origin
 const web3 = solanaWeb3
 const conn = new web3.Connection('https://api.devnet.solana.com', 'confirmed')
-let provider = null
-
 const $ = (id) => document.getElementById(id)
 const short = (s) => s.slice(0,4)+'…'+s.slice(-4)
+function escapeHtml(s){ return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) }
+function prettify(s){ try{ return escapeHtml(JSON.stringify(JSON.parse(s), null, 2)) }catch{ return escapeHtml(String(s)) } }
 
-// ── service selector ──
+function showTab(t){
+  $('auto').hidden = t!=='auto'; $('human').hidden = t!=='human'
+  $('tabAuto').classList.toggle('active', t==='auto'); $('tabHuman').classList.toggle('active', t==='human')
+}
+
+// ════ AUTONOMOUS ════
+let autoTimer = null
+$('runAuto').onclick = async () => {
+  $('runAuto').disabled = true; $('runAuto').textContent = 'Starting agents…'
+  try{
+    const r = await fetch(`${SERVER}/autonomous/start`, { method:'POST' }).then(r=>r.json())
+    if(r.error) throw new Error(r.error)
+    $('runAuto').textContent = '● Running — buyer is paying the seller'
+    $('tally').style.display = 'flex'; $('feedCard').style.display = 'block'
+    if(autoTimer) clearInterval(autoTimer)
+    autoTimer = setInterval(pollFeed, 2500); pollFeed()
+  }catch(e){ $('runAuto').disabled = false; $('runAuto').textContent = 'Run the agent↔agent demo'; alert(e.message) }
+}
+async function pollFeed(){
+  const r = await fetch(`${SERVER}/autonomous/feed`).then(r=>r.json()).catch(()=>null)
+  if(r?.messages) renderFeed(r.messages)
+}
+function renderFeed(messages){
+  const wrap = $('feed'); wrap.innerHTML = ''; let settled = 0
+  for(const m of messages){
+    const buyer = m.sender === 'buyer-agent'; const t = m.text; let html
+    if(/^request/i.test(t))                html = `🛒 ${escapeHtml(t.replace(/^request\s*/i,'request: '))}`
+    else if(t.includes('PAYMENT_REQUIRED')){ const a = t.match(/amount=([\d.]+)/)?.[1]; html = `💰 payment required — <b>${a} SOL</b>` }
+    else if(/^paid/i.test(t)){ const sig = t.match(/paid\s+(\S+)/i)?.[1]; html = `✅ paid <a target="_blank" href="https://explorer.solana.com/tx/${sig}?cluster=devnet">${short(sig)} ↗</a>` }
+    else if(/^DELIVERED/i.test(t)){ settled++; html = `📦 delivered<pre>${prettify(t.replace(/^DELIVERED\s*/i,''))}</pre>` }
+    else if(/^ANALYSIS/i.test(t))           html = `🧠 ${escapeHtml(t.replace(/^ANALYSIS\s*/i,''))}`
+    else                                    html = escapeHtml(t.slice(0,200))
+    const b = document.createElement('div'); b.className = `bubble ${buyer?'buyer':'seller'}`
+    b.innerHTML = `<div class="from">${buyer?'🤖 buyer-agent':'🏪 seller-agent'}</div>${html}`
+    wrap.appendChild(b)
+  }
+  $('tally').innerHTML = settled
+    ? `<span class="g"></span> ${settled} settlement${settled>1?'s':''} on-chain — agents paying each other autonomously`
+    : `<span class="g"></span> agents connecting… first cycle in a few seconds`
+  wrap.scrollTop = wrap.scrollHeight
+}
+
+// ════ HUMAN CHECKOUT ════
+let provider = null
 document.querySelectorAll('.opt').forEach(opt => opt.addEventListener('click', () => {
   document.querySelectorAll('.opt').forEach(o => o.classList.remove('sel'))
   opt.classList.add('sel'); opt.querySelector('input').checked = true
 }))
 const selectedService = () => document.querySelector('input[name=s]:checked').value
-
-// ── activity timeline ──
 function step(head, meta, cls='ok'){
   $('logCard').style.display = 'block'
   const d = document.createElement('div'); d.className = `step ${cls}`
-  d.innerHTML = `<span class="bullet">${cls==='err'?'✕':'✓'}</span><div class="body"><div class="head">${head}</div>${meta?`<div class="meta">${meta}</div>`:''}</div>`
+  d.innerHTML = `<span class="bullet">${cls==='err'?'✕':'✓'}</span><div><div style="font-weight:600">${head}</div>${meta?`<div class="meta">${meta}</div>`:''}</div>`
   $('log').appendChild(d)
 }
-
-function getPhantom(){
-  const p = window.phantom?.solana
-  if(!p?.isPhantom){ alert('Phantom not found — install it and switch the network to Devnet.'); return null }
-  return p
-}
+function getPhantom(){ const p = window.phantom?.solana; if(!p?.isPhantom){ alert('Phantom not found — install it, set network to Devnet.'); return null } return p }
 
 $('connect').onclick = async () => {
   provider = getPhantom(); if(!provider) return
   const { publicKey } = await provider.connect()
-  $('who').style.display = 'flex'
-  $('addr').textContent = short(publicKey.toString())
+  $('who').style.display = 'flex'; $('addr').textContent = short(publicKey.toString())
   $('connect').textContent = 'Connected'; $('connect').disabled = true
   $('orderCard').style.opacity = '1'; $('orderCard').style.pointerEvents = 'auto'
 }
-
 $('buy').onclick = async () => {
   if(!provider) return
   $('buy').disabled = true
   try{
     $('buy').textContent = 'Asking the seller agent…'
-    // 1. Ask the seller (via the bridge → CoralOS) for a payment request.
-    const order = await fetch(`${SERVER}/order`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ service: selectedService() }),
-    }).then(r => r.json())
+    const order = await fetch(`${SERVER}/order`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ service: selectedService() }) }).then(r=>r.json())
     if(order.error) throw new Error(order.error)
-
-    $('quote').style.display = 'block'
-    $('recipient').textContent = short(order.recipient)
-    $('amount').textContent = `${order.amountSol} SOL`
+    $('quote').style.display = 'block'; $('recipient').textContent = short(order.recipient); $('amount').textContent = `${order.amountSol} SOL`
     step('Order opened', `reference ${short(order.reference)}`)
-
-    // 2. Build + sign a transfer that writes the order's reference key in (binds the payment).
     $('buy').textContent = 'Approve in Phantom…'
     const { blockhash } = await conn.getLatestBlockhash()
-    const ix = web3.SystemProgram.transfer({
-      fromPubkey: provider.publicKey,
-      toPubkey: new web3.PublicKey(order.recipient),
-      lamports: Math.round(Number(order.amountSol) * web3.LAMPORTS_PER_SOL),
-    })
+    const ix = web3.SystemProgram.transfer({ fromPubkey: provider.publicKey, toPubkey: new web3.PublicKey(order.recipient), lamports: Math.round(Number(order.amountSol)*web3.LAMPORTS_PER_SOL) })
     if(order.reference) ix.keys.push({ pubkey:new web3.PublicKey(order.reference), isSigner:false, isWritable:false })
     const tx = new web3.Transaction({ feePayer: provider.publicKey, recentBlockhash: blockhash }).add(ix)
     const { signature } = await provider.signAndSendTransaction(tx)
     step('Paid on-chain', `<a target="_blank" href="https://explorer.solana.com/tx/${signature}?cluster=devnet">${short(signature)} ↗</a>`)
-
-    // 3. Send proof to the seller; wait for delivery.
     $('buy').textContent = 'Seller verifying + delivering…'
-    const done = await fetch(`${SERVER}/order/${order.reference}/paid`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ sig: signature }),
-    }).then(r => r.json())
+    const done = await fetch(`${SERVER}/order/${order.reference}/paid`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ sig: signature }) }).then(r=>r.json())
     if(done.error) throw new Error(done.error)
-
     step('Delivered', `<pre>${prettify(done.data)}</pre>`)
     $('buy').textContent = 'Buy again'
-  }catch(e){
-    step('Error', escapeHtml(String(e.message||e)), 'err')
-    $('buy').textContent = 'Request & Pay'
-  }finally{
-    $('buy').disabled = false
-  }
+  }catch(e){ step('Error', escapeHtml(String(e.message||e)), 'err'); $('buy').textContent = 'Request & Pay' }
+  finally{ $('buy').disabled = false }
 }
-
-function prettify(s){ try{ return escapeHtml(JSON.stringify(JSON.parse(s), null, 2)) }catch{ return escapeHtml(String(s)) } }
-function escapeHtml(s){ return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) }
 </script>
 </body>
 </html>

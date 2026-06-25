@@ -28,9 +28,18 @@ const PRICE_SOL = process.env.PRICE_SOL ?? '0.0001'
 const SERVICE = process.env.SERVICE ?? 'jupiter'
 const RPC = process.env.SOLANA_RPC_URL ?? 'https://api.devnet.solana.com'
 const ANTHROPIC = process.env.ANTHROPIC_API_KEY ?? ''
+const BUYER_KEYPAIR_B58 = process.env.BUYER_KEYPAIR_B58 ?? '' // only for the autonomous demo
+const BUYER_MAX_SOL = Number(process.env.BUYER_MAX_SOL ?? '0.001')
 
 // ── Typed coral option values: { type: "string" | "f64", value } ──
 const str = (value: string) => ({ type: 'string', value })
+const f64 = (value: number) => ({ type: 'f64', value })
+
+/** Agent descriptor for a session request. */
+const localAgent = (name: string, options: Record<string, unknown> = {}) => ({
+  id: { name, version: '0.1.0', registrySourceId: { type: 'local' } },
+  name, provider: { type: 'local', runtime: 'docker' }, options,
+})
 
 // ── Lazy long-lived session [seller-agent, user-proxy]; one thread per order ──
 let session: Promise<string> | null = null
@@ -46,11 +55,6 @@ function ensureSession(): Promise<string> {
       SERVICE: str(SERVICE),
     }
     if (ANTHROPIC) sellerOpts.ANTHROPIC_API_KEY = str(ANTHROPIC)
-
-    const localAgent = (name: string, options: Record<string, unknown> = {}) => ({
-      id: { name, version: '0.1.0', registrySourceId: { type: 'local' } },
-      name, provider: { type: 'local', runtime: 'docker' }, options,
-    })
 
     const res = await fetch(`${BASE}/api/v1/local/session`, {
       method: 'POST', headers: AUTH,
@@ -78,13 +82,18 @@ async function inject(sid: string, threadId: string, content: string) {
   if (!res.ok) throw new Error(`inject failed: ${res.status} ${await res.text()}`)
 }
 
-/** Recursively collect message objects ({ threadId, text }) from the extended session state. */
-function collectMessages(node: unknown, out: { threadId: string; text: string }[] = []): { threadId: string; text: string }[] {
+/** A message pulled from the extended session state. */
+interface Msg { threadId: string; text: string; sender: string }
+
+/** Recursively collect messages from the extended session state (in traversal/thread order). */
+function collectMessages(node: unknown, out: Msg[] = []): Msg[] {
   if (Array.isArray(node)) {
     for (const v of node) collectMessages(v, out)
   } else if (node && typeof node === 'object') {
     const o = node as Record<string, unknown>
-    if (typeof o.threadId === 'string' && typeof o.text === 'string') out.push({ threadId: o.threadId, text: o.text })
+    if (typeof o.threadId === 'string' && typeof o.text === 'string') {
+      out.push({ threadId: o.threadId, text: o.text, sender: typeof o.senderName === 'string' ? o.senderName : '' })
+    }
     for (const v of Object.values(o)) collectMessages(v, out)
   }
   return out
@@ -170,6 +179,54 @@ app.post('/order/:reference/paid', async (req, res) => {
   }
 })
 
+// ── Autonomous front door — the agent↔agent demo ────────────────────────────
+let autonomousSid: string | null = null
+
+/** Start (or reuse) a `[buyer-agent, seller-agent]` session — coral spawns both; the buyer pays the seller in a loop. */
+app.post('/autonomous/start', async (_req, res) => {
+  try {
+    if (!SELLER_WALLET || !BUYER_KEYPAIR_B58) {
+      return res.status(400).json({ error: 'SELLER_WALLET and BUYER_KEYPAIR_B58 must be set for the autonomous demo' })
+    }
+    if (autonomousSid) return res.json({ sessionId: autonomousSid, reused: true })
+
+    const sellerOpts: Record<string, unknown> = { SELLER_WALLET: str(SELLER_WALLET), SOLANA_RPC_URL: str(RPC), SERVICE: str(SERVICE) }
+    const buyerOpts: Record<string, unknown> = { BUYER_KEYPAIR_B58: str(BUYER_KEYPAIR_B58), SOLANA_RPC_URL: str(RPC), BUYER_MAX_SOL: f64(BUYER_MAX_SOL) }
+    if (ANTHROPIC) { sellerOpts.ANTHROPIC_API_KEY = str(ANTHROPIC); buyerOpts.ANTHROPIC_API_KEY = str(ANTHROPIC) }
+
+    const r = await fetch(`${BASE}/api/v1/local/session`, {
+      method: 'POST', headers: AUTH,
+      body: JSON.stringify({
+        agentGraphRequest: { agents: [localAgent('buyer-agent', buyerOpts), localAgent('seller-agent', sellerOpts)] },
+        namespaceProvider: { type: 'create_if_not_exists', namespaceRequest: { name: NS } },
+        execution: { mode: 'immediate' },
+      }),
+    })
+    if (!r.ok) throw new Error(`session create failed: ${r.status} ${await r.text()}`)
+    autonomousSid = (await r.json() as { sessionId: string }).sessionId
+    console.error(`[bridge] autonomous session ${autonomousSid}`)
+    res.json({ sessionId: autonomousSid })
+  } catch (e) {
+    console.error(`[bridge] /autonomous/start error: ${e}`)
+    res.status(502).json({ error: (e as Error).message })
+  }
+})
+
+/** Live feed: the buyer⇄seller conversation, read from the session's extended state. */
+app.get('/autonomous/feed', async (_req, res) => {
+  if (!autonomousSid) return res.json({ running: false, messages: [] })
+  try {
+    const r = await fetch(`${BASE}/api/v1/local/session/${NS}/${autonomousSid}/extended`, { headers: AUTH })
+    if (!r.ok) return res.json({ running: true, messages: [] })
+    const messages = collectMessages(await r.json())
+      .filter(m => m.sender === 'buyer-agent' || m.sender === 'seller-agent')
+      .map(m => ({ sender: m.sender, text: m.text }))
+    res.json({ running: true, messages })
+  } catch (e) {
+    res.status(502).json({ error: (e as Error).message })
+  }
+})
+
 app.listen(PORT, () => {
-  console.error(`[bridge] human front door on :${PORT} — seller=${SELLER_WALLET || '(SELLER_WALLET unset!)'} service=${SERVICE}`)
+  console.error(`[bridge] agent economy on :${PORT} — seller=${SELLER_WALLET || '(SELLER_WALLET unset!)'} service=${SERVICE}`)
 })

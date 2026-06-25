@@ -53,6 +53,8 @@ services:
       - SERVICE=${SERVICE:-jupiter}
       - SOLANA_RPC_URL=${SOLANA_RPC_URL:-https://api.devnet.solana.com}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - BUYER_KEYPAIR_B58=${BUYER_KEYPAIR_B58}   # for the autonomous demo viewer
+      - BUYER_MAX_SOL=${BUYER_MAX_SOL:-0.001}
     depends_on:
       - coral
     restart: unless-stopped
