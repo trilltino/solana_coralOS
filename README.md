@@ -119,13 +119,13 @@ npx skills add https://github.com/solana-foundation/solana-dev-skill --global --
 Code* as slash commands:
 
 ```
-/plugin marketplace add Coral-Protocol/coral-skill-set
+/plugin marketplace add https://github.com/Coral-Protocol/coral-skill-set
 /plugin install coral-skills@coral-skill-set
 /reload-plugins
 ```
 
-Then `/coral-setup`, `/coral-session-control`, `/coralize-your-agent`, etc. Restart Claude Code (or
-reload) after installing so the skills load.
+Use the full **HTTPS URL** (the `owner/repo` shorthand clones via SSH and fails without GitHub SSH
+keys). Then `/coral-setup`, `/coral-session-control`, etc. Reload Claude Code after installing.
 
 ## License
 

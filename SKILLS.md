@@ -18,10 +18,14 @@ Two optional Claude Code skill sets that extend the IDE with commands and knowle
 Install inside Claude Code — run these three as slash commands:
 
 ```
-/plugin marketplace add Coral-Protocol/coral-skill-set
+/plugin marketplace add https://github.com/Coral-Protocol/coral-skill-set
 /plugin install coral-skills@coral-skill-set
 /reload-plugins
 ```
+
+> Use the full **HTTPS URL** as shown. The `owner/repo` shorthand resolves to an SSH clone
+> (`git@github.com:…`), which fails if you don't have GitHub SSH keys set up. The repo is public, so
+> the HTTPS URL needs no auth.
 
 Adds slash commands for working with CoralOS multi-agent sessions.
 
