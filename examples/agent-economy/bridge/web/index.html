@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Agent Economy — Checkout</title>
+<script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
+<style>
+  :root { --brand:#9945FF; --green:#14F195; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif; background:#0a0a0f; color:#e6e6f0; }
+  .wrap { max-width:560px; margin:0 auto; padding:48px 20px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .sub { color:#8a8aa0; margin:0 0 28px; }
+  .card { background:#13131c; border:1px solid #232334; border-radius:14px; padding:22px; margin-bottom:16px; }
+  label { display:block; font-size:12px; color:#8a8aa0; margin-bottom:6px; text-transform:uppercase; letter-spacing:.04em; }
+  select, button { font:inherit; }
+  select { width:100%; padding:11px; border-radius:9px; background:#0a0a0f; color:#e6e6f0; border:1px solid #2c2c40; }
+  button { width:100%; padding:13px; border:0; border-radius:9px; background:var(--brand); color:#fff; font-weight:600; cursor:pointer; margin-top:14px; }
+  button:disabled { opacity:.5; cursor:default; }
+  .ghost { background:#1c1c28; }
+  .row { display:flex; justify-content:space-between; font-size:13px; color:#a8a8c0; padding:4px 0; }
+  .row b { color:#e6e6f0; font-weight:600; }
+  pre { background:#0a0a0f; border:1px solid #232334; border-radius:9px; padding:14px; overflow:auto; font-size:12.5px; color:var(--green); white-space:pre-wrap; word-break:break-word; }
+  a { color:var(--brand); }
+  .step { font-size:12px; color:#6a6a82; margin:18px 0 8px; text-transform:uppercase; letter-spacing:.05em; }
+  .badge { display:inline-block; background:#1c2b22; color:var(--green); border-radius:6px; padding:2px 8px; font-size:11px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Agent Economy <span class="badge">devnet</span></h1>
+  <p class="sub">Pay a seller agent in SOL with Phantom. Same agent, same on-chain settlement the autonomous buyer uses — you're just the human front door.</p>
+
+  <div class="card">
+    <label>Connect</label>
+    <button id="connect" class="ghost">Connect Phantom</button>
+    <div id="who" class="row" style="margin-top:10px; display:none"></div>
+  </div>
+
+  <div class="card" id="orderCard" style="opacity:.5; pointer-events:none">
+    <label for="service">Service to buy</label>
+    <select id="service">
+      <option value="jupiter">Jupiter — SOL→USDC swap quote</option>
+      <option value="coingecko">CoinGecko — live price</option>
+      <option value="inference">Claude inference — a completion</option>
+    </select>
+    <button id="buy">Request &amp; Pay</button>
+    <div id="quote" style="display:none; margin-top:14px">
+      <div class="row"><span>Pay to (seller)</span><b id="recipient">—</b></div>
+      <div class="row"><span>Amount</span><b id="amount">—</b></div>
+    </div>
+  </div>
+
+  <div id="log"></div>
+</div>
+
+<script>
+const SERVER = location.origin            // bridge serves this page → same origin
+const web3 = solanaWeb3
+const conn = new web3.Connection('https://api.devnet.solana.com', 'confirmed')
+let provider = null
+
+const $ = (id) => document.getElementById(id)
+const log = (html) => { const d = document.createElement('div'); d.className='card'; d.innerHTML = html; $('log').prepend(d) }
+
+function getPhantom() {
+  const p = window.phantom?.solana
+  if (!p?.isPhantom) { alert('Phantom wallet not found — install it and set the network to Devnet.'); return null }
+  return p
+}
+
+$('connect').onclick = async () => {
+  provider = getPhantom(); if (!provider) return
+  const resp = await provider.connect()
+  const pk = resp.publicKey.toString()
+  $('who').style.display = 'flex'
+  $('who').innerHTML = `<span>Wallet</span><b>${pk.slice(0,4)}…${pk.slice(-4)}</b>`
+  $('connect').textContent = 'Connected'
+  $('connect').disabled = true
+  $('orderCard').style.opacity = '1'
+  $('orderCard').style.pointerEvents = 'auto'
+}
+
+$('buy').onclick = async () => {
+  if (!provider) return
+  $('buy').disabled = true
+  $('buy').textContent = 'Asking the seller agent…'
+  try {
+    // 1. Ask the seller (via the bridge → CoralOS) for a payment URL.
+    const order = await fetch(`${SERVER}/order`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ service: $('service').value }),
+    }).then(r => r.json())
+    if (order.error) throw new Error(order.error)
+
+    $('quote').style.display = 'block'
+    $('recipient').textContent = order.recipient.slice(0,4)+'…'+order.recipient.slice(-4)
+    $('amount').textContent = `${order.amountSol} SOL`
+    log(`<div class="step">Order opened</div><div class="row"><span>memo</span><b>${order.memo}</b></div>`)
+
+    // 2. Build + sign a plain transfer of amountSol to the seller (what verifyPayment checks).
+    $('buy').textContent = 'Approve in Phantom…'
+    const { blockhash } = await conn.getLatestBlockhash()
+    const tx = new web3.Transaction({ feePayer: provider.publicKey, recentBlockhash: blockhash })
+    tx.add(web3.SystemProgram.transfer({
+      fromPubkey: provider.publicKey,
+      toPubkey: new web3.PublicKey(order.recipient),
+      lamports: Math.round(Number(order.amountSol) * web3.LAMPORTS_PER_SOL),
+    }))
+    const { signature } = await provider.signAndSendTransaction(tx)
+    log(`<div class="step">Paid on-chain</div><div class="row"><span>tx</span><b><a target="_blank" href="https://explorer.solana.com/tx/${signature}?cluster=devnet">${signature.slice(0,8)}…</a></b></div>`)
+
+    // 3. Send proof to the seller; wait for delivery.
+    $('buy').textContent = 'Seller verifying + delivering…'
+    const done = await fetch(`${SERVER}/order/${order.memo}/paid`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ sig: signature }),
+    }).then(r => r.json())
+    if (done.error) throw new Error(done.error)
+
+    log(`<div class="step">Delivered ✅</div><pre>${escapeHtml(done.data)}</pre>`)
+    $('buy').textContent = 'Buy again'
+  } catch (e) {
+    log(`<div class="step">Error</div><div class="row"><span>${escapeHtml(String(e.message||e))}</span></div>`)
+    $('buy').textContent = 'Request & Pay'
+  } finally {
+    $('buy').disabled = false
+  }
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) }
+</script>
+</body>
+</html>

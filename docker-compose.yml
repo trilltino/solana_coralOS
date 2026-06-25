@@ -48,6 +48,11 @@ services:
     environment:
       - CORAL_SERVER_URL=http://coral:5555
       - CORAL_TOKEN=dev
+      - SELLER_WALLET=${WALLET}
+      - PRICE_SOL=${PRICE_SOL:-0.0001}
+      - SERVICE=${SERVICE:-jupiter}
+      - SOLANA_RPC_URL=${SOLANA_RPC_URL:-https://api.devnet.solana.com}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     depends_on:
       - coral
     restart: unless-stopped
