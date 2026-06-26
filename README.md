@@ -132,7 +132,7 @@ is the same pay-per-call loop as two bare-metal Node processes over plain HTTP `
 
 | Directory | Purpose |
 |-----------|---------|
-| `examples/agent-economy/` | **the track** — `autonomous/` (agent→agent), `bridge/` (order API + serves the UI), `web/` (the React demo UI), `config/`, `quickstart/` (no-Docker + `minimal-ui.html`) |
+| `examples/agent-economy/` | **the track** — `autonomous/` (agent→agent), `bridge/` (order API + serves the UI), `web/` (the React demo UI), `config/`, `quickstart/` (no-Docker) |
 | `coral-agents/` | the agents coral-server launches: `seller-agent` (fork `service.ts`), `buyer-agent`, `user-proxy`, `echo-agent` |
 | `packages/agent-runtime/` | agent runtime: `AgentManager`, `Strategy`, MessageBus, CoralOS MCP client, strategies |
 | `scripts/` | `setup.js` (wallet generation) + smoke tests |

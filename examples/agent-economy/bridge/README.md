@@ -39,8 +39,7 @@ web/            the built React UI (copied in by bridge/Dockerfile; source lives
 smoke.ts        headless test — pays from the .env keypair in place of the Phantom click
 ```
 
-> The React source is `examples/agent-economy/web/`; the zero-build single-file version is
-> `examples/agent-economy/quickstart/minimal-ui.html`.
+> The React source lives in `examples/agent-economy/web/`.
 
 ## Why read replies from session state
 

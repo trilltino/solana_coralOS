@@ -31,5 +31,4 @@ npm run typecheck
 - `src/hooks/useFeed.ts` — polls the autonomous conversation.
 
 The backend doesn't change — this is purely a nicer window onto the same economy. Full build notes:
-[`docs/REACT_FRONTEND.md`](../../../docs/REACT_FRONTEND.md). The zero-build version is
-`examples/agent-economy/quickstart/minimal-ui.html`.
+[`docs/REACT_FRONTEND.md`](../../../docs/REACT_FRONTEND.md).

@@ -3,13 +3,12 @@
 A complete, copy-paste guide to the **Vite + React + TypeScript + Solana wallet-adapter** app — the
 polished showcase. Every file is here.
 
-> ✅ **This is already built and is now the default UI** at `examples/agent-economy/web/`. The bridge
+> ✅ **This is already built and is the only frontend** at `examples/agent-economy/web/`. The bridge
 > builds and serves it at `:3010` (multi-stage `bridge/Dockerfile`). The steps below are how it was
-> assembled — use them to understand, extend, or rebuild it. The old single-file UI is preserved as
-> `examples/agent-economy/quickstart/minimal-ui.html`.
+> assembled — use them to understand, extend, or rebuild it.
 
-**The one principle:** the backend does not change. React calls the exact same bridge endpoints the
-single-file UI does. You're swapping *how it looks*, not *how it works*.
+**The one principle:** the backend does not change. React calls the bridge endpoints directly —
+you're working on *how it looks*, not *how it works*.
 
 ```
 React app (:5173 dev / served by bridge in prod)
@@ -30,7 +29,7 @@ The bridge contracts (from `bridge/server.ts`), so the code below is exact:
 
 ## Step 0 — Prerequisites
 Node 20+, the bridge runnable (`docker compose up -d coral bridge`), and a Phantom wallet set to
-**Devnet**. The single-file UI stays as the no-build fallback (Step 8).
+**Devnet**.
 
 ## Step 1 — Scaffold
 From the repo root:
@@ -425,15 +424,6 @@ First `up` is slower (it installs + builds the UI inside the image); after that 
 after UI changes: `docker compose up -d --build bridge` — or just use `npm run dev` (Step 7) while
 developing.
 
-## Step 9 — Keep the single-file as the minimal reference
-Don't delete it — it's the no-build, readable fallback and the quickstart UI. Move it:
-```sh
-git mv examples/agent-economy/bridge/web/index.html \
-       examples/agent-economy/quickstart/minimal-ui.html
-```
-Note it in the quickstart README as "the zero-build version of the demo." Now you have two artifacts:
-the **React app** (showcase) and the **single file** (minimal reference) — same backend.
-
 ---
 
 ## Verification checklist
@@ -442,7 +432,6 @@ the **React app** (showcase) and the **single file** (minimal reference) — sam
 - [ ] **Checkout**: Phantom connects (Devnet) → Buy → real tx (check the sig on Explorer) → result shows
 - [ ] `npm run build` succeeds → `dist/`
 - [ ] Bridge serves `dist/` in prod (open `:3010`, no Vite running)
-- [ ] Single-file preserved as the minimal reference
 
 ## Optional polish
 - An **Explorer link** for each settled tx (`https://explorer.solana.com/tx/${sig}?cluster=devnet`)
