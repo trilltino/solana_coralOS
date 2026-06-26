@@ -6,7 +6,7 @@ import React, { useMemo } from 'react'
 import ReactDOM from 'react-dom/client'
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react'
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui'
-import { PhantomWalletAdapter } from '@solana/wallet-adapter-wallets'
+import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets'
 import App from './App'
 import '@solana/wallet-adapter-react-ui/styles.css'
 import './styles.css'
@@ -14,7 +14,7 @@ import './styles.css'
 const ENDPOINT = import.meta.env.VITE_RPC_URL ?? 'https://api.devnet.solana.com'
 
 function Root() {
-  const wallets = useMemo(() => [new PhantomWalletAdapter()], [])
+  const wallets = useMemo(() => [new PhantomWalletAdapter(), new SolflareWalletAdapter()], [])
   return (
     <ConnectionProvider endpoint={ENDPOINT}>
       <WalletProvider wallets={wallets} autoConnect>
