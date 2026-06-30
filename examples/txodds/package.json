@@ -10,7 +10,8 @@
     "test": "vitest run",
     "mint": "tsx server/mint.ts",
     "proxy": "tsx server/proxy.ts",
-    "web": "npx --yes serve web -l 3020"
+    "web": "npx --yes serve web -l 3020",
+    "coral": "tsx coral/round.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",

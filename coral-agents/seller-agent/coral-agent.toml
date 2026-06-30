@@ -1,0 +1,26 @@
+edition = 4
+
+[agent]
+name = "seller-agent"
+version = "0.1.0"
+description = "LLM seller for the agent marketplace. Bids on a buyer's WANT (never below its floor), settles the win through the escrow contract on delivery. Base image for the seller personas; also handles the legacy 1:1 'request'/'paid' on-ramp."
+summary = "TypeScript marketplace seller that bids for jobs and settles via escrow."
+readme = "Bids in the shared market thread (WANT -> BID), and on AWARD asks the buyer to fund escrow (ESCROW_REQUIRED); once it confirms the escrow is funded on-chain it delivers (DELIVERED) and the buyer releases. The legacy 1:1 'request <query>' -> Solana Pay URL -> 'paid <sig>' flow is still handled."
+
+[agent.license]
+type = "spdx"
+expression = "MIT"
+
+[options]
+SELLER_WALLET = { type = "string", description = "Devnet wallet pubkey that receives payments" }
+PRICE_SOL = { type = "f64", default = 0.0001, description = "Price per request in SOL" }
+SERVICE = { type = "string", default = "jupiter", description = "Service to sell: jupiter | coingecko | news | inference" }
+SOLANA_RPC_URL = { type = "string", default = "", description = "Solana RPC URL" }
+HELIUS_API_KEY = { type = "string", default = "", description = "Helius API key" }
+JUPITER_API_KEY = { type = "string", default = "", description = "Jupiter API key for higher rate limits (free at jup.ag/developers)" }
+NEWS_API_KEY = { type = "string", default = "", description = "NewsAPI key (only needed for SERVICE=news)" }
+ANTHROPIC_API_KEY = { type = "string", default = "", description = "Anthropic API key (only needed for SERVICE=inference)" }
+INFERENCE_MODEL = { type = "string", default = "claude-opus-4-8", description = "Model for SERVICE=inference; Opus for max quality, override with claude-haiku-4-5 for micropayment cost-fit" }
+
+[runtimes.docker]
+image = "seller-agent:0.1.0"

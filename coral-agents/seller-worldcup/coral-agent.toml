@@ -1,0 +1,34 @@
+edition = 4
+
+[agent]
+name = "seller-worldcup"
+version = "0.1.0"
+description = "Marketplace seller persona — World Cup oracle specialist. Reuses the seller-agent image; sells verified TxODDS World Cup data (the `txline` service) and an LLM value call."
+summary = "A specialist that bids only on World Cup data jobs and delivers an LLM-analysed edge."
+readme = "Bids in the shared market thread when the WANT is a `txline` service, wins because the generalists decline it, fetches de-margined World Cup odds from TxLINE, runs them through the LLM, and settles via escrow. Same image as seller-agent; SERVICES=txline + TXLINE_API_KEY shape it."
+
+[agent.license]
+type = "spdx"
+expression = "MIT"
+
+[options]
+SELLER_WALLET = { type = "string", description = "Devnet wallet pubkey that receives payments" }
+AGENT_NAME = { type = "string", default = "seller-worldcup", description = "Market identity (matches the registry name)" }
+SERVICES = { type = "string", default = "txline", description = "Inventory — this specialist bids only on txline (World Cup data)" }
+FLOOR_SOL = { type = "f64", default = 0.0005, description = "Cost floor — the LLM may never bid below this (the edge runs a real Claude call)" }
+PERSONA = { type = "string", default = "a World Cup trading specialist who sells verified TxODDS odds and a sharp one-line value call", description = "Bidding persona (LLM system prompt)" }
+SERVICE = { type = "string", default = "txline", description = "What deliverService returns: txline (fixtures | odds <id> | edge <id>)" }
+SOLANA_RPC_URL = { type = "string", default = "", description = "Solana RPC URL (devnet)" }
+ESCROW_DEADLINE_SECS = { type = "f64", default = 600, description = "Refund deadline for escrow deposits (seconds)" }
+TXLINE_API_KEY = { type = "string", default = "", description = "Activated TxLINE API token (from the one-time devnet subscribe — see examples/txodds)" }
+TXLINE_BASE_URL = { type = "string", default = "", description = "Override the TxLINE host (defaults to txline-dev.txodds.com)" }
+ANTHROPIC_API_KEY = { type = "string", default = "", description = "Anthropic key — the edge verb runs a Claude completion" }
+OPENAI_API_KEY = { type = "string", default = "", description = "OpenAI key — set with LLM_PROVIDER=openai to flip the brain" }
+LLM_PROVIDER = { type = "string", default = "", description = "anthropic (default) | openai" }
+LLM_MODEL = { type = "string", default = "", description = "Override the LLM model id" }
+INFERENCE_MODEL = { type = "string", default = "", description = "Model for the edge's Claude call (default claude-opus-4-8)" }
+TRACE = { type = "string", default = "", description = "Set to 1 to log CoralOS calls + on-chain steps" }
+
+# Reuses the already-built seller-agent image — no separate build needed.
+[runtimes.docker]
+image = "seller-agent:0.1.0"

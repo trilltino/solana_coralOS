@@ -56,6 +56,19 @@ little devnet SOL. It subscribes that wallet to the free World Cup tier on devne
 fixtures with verified live odds**. The browser never sees the token or the key — everything sensitive
 stays in the proxy. Without funding/a key, the board shows clearly-labelled sample data.
 
+## CoralOS round (the multi-agent view)
+
+The web demo above is one agent. For the **multi-agent** version — a buyer agent + a World Cup seller
+agent trading this same edge **over CoralOS (MCP)** and settling via the escrow on devnet — see
+[`coral/`](coral/README.md):
+
+```sh
+docker compose up -d coral        # coral-server (the MCP coordinator) — from the repo root
+npm run coral                     # one buyer + one seller; watch a full WANT → … → RELEASED round
+```
+
+Needs Docker + `TXLINE_API_KEY` (`npm run mint`). Verified: a real `RELEASED` tx on devnet.
+
 ## Verified on devnet (2026-06)
 
 | Check | Value |

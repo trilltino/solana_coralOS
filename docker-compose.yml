@@ -1,0 +1,43 @@
+# CoralOS coordinator for the TxODDS round — stock coral-server, wallet-free.
+#
+#   docker compose up -d coral             # start coral-server (the MCP coordinator)
+#   cd examples/txodds && npm run coral     # launch one buyer + one World Cup seller round
+#
+# coral-server is a PURE MCP coordinator (no [wallet]). It launches the buyer + seller as containers per
+# session via the Docker socket; settlement is the Solana escrow (agent-side) — coral never holds a key.
+# Per-agent config is sent by examples/txodds/coral/round.ts in the session request; the env below is a
+# fallback forwarded to the agents coral launches.
+
+services:
+
+  # ── CoralOS — MCP bus that launches the agents per session ──────────────────
+  coral:
+    # Pinned by digest for reproducibility (what `:latest` resolved to on 2026-06-27). Bump:
+    #   docker pull ghcr.io/coral-protocol/coral-server:latest
+    #   docker inspect --format '{{index .RepoDigests 0}}' ghcr.io/coral-protocol/coral-server:latest
+    image: ghcr.io/coral-protocol/coral-server:latest@sha256:2acd1701aed63367583b4ff4496d3a4255112f7363b4daae7c3a700acf35c6eb
+    container_name: coral
+    ports:
+      - "5555:5555"
+    environment:
+      - CONFIG_FILE_PATH=/config/coral.toml
+      # Forwarded to the agents coral launches (round.ts also passes these per-agent):
+      - SELLER_WALLET=${WALLET}
+      - SOLANA_RPC_URL=${SOLANA_RPC_URL:-https://api.devnet.solana.com}
+      - BUYER_KEYPAIR_B58=${BUYER_KEYPAIR_B58}
+      - BUYER_MAX_SOL=${BUYER_MAX_SOL:-0.001}
+      # LLM brain — Anthropic by default; LLM_PROVIDER=openai + OPENAI_API_KEY to flip it.
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - LLM_PROVIDER=${LLM_PROVIDER:-}
+      - LLM_MODEL=${LLM_MODEL:-}
+      # The TxLINE token the seller uses to fetch verified World Cup odds (mint with `npm run mint`).
+      - TXLINE_API_KEY=${TXLINE_API_KEY}
+      - TXLINE_BASE_URL=${TXLINE_BASE_URL:-}
+      # Set TRACE=1 to log coral_* calls + on-chain Explorer links in the agents.
+      - TRACE=${TRACE:-}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./examples/txodds/coral/coral.toml:/config/coral.toml:ro
+      - ./coral-agents:/agents:ro
+    restart: unless-stopped

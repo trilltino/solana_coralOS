@@ -101,10 +101,12 @@ numbers. Without live data it falls back to a clearly-labelled demo board.
 
 ## Under the hood — the runtime
 
-> **Single agent, by the way.** `npm run dev` runs **one** agent (the oracle): proxy + web. The
-> bidding/competing/AWARD "agent market" lives in the `coral/` + `market/` modules below and is
-> **unit-tested but not launched** by the demo — it's scaffolding to grow into a multi-agent market,
-> not something running at runtime. The repo name (`solana_coralOS`) hints at more than the demo ships.
+> **Two views of the same product.** `npm run dev` is the **single-agent** web oracle (proxy → read →
+> arbiter settle). The **multi-agent** version is the **CoralOS round** — `docker compose up -d coral`
+> then `npm run coral` (in `examples/txodds`): a buyer agent + a World Cup seller agent trade the same
+> edge **over coral-server (MCP)** and settle through the escrow on devnet (a real `WANT → … → RELEASED`
+> round). See [`examples/txodds/coral/`](examples/txodds/coral). The web view needs no Docker; the
+> CoralOS round needs Docker (coral-server).
 
 The agent imports [`packages/agent-runtime`](packages/agent-runtime) and writes only behaviour. Four
 modules, one per concern:
@@ -115,8 +117,9 @@ modules, one per concern:
 - **`solana/`** — Solana Pay helpers + [`solanaConnection()`](packages/agent-runtime/src/solana/connection.ts),
   the **devnet guard** that throws on a mainnet RPC unless `ALLOW_MAINNET=1`, so it applies everywhere
   value moves.
-- **`coral/`** + **`market/`** — a CoralOS (MCP) client and the WANT/BID/AWARD market protocol. Not
-  used by this single-agent oracle, but the rails are there if you grow it into a multi-agent market.
+- **`coral/`** + **`market/`** — a CoralOS (MCP) client and the WANT/BID/AWARD market protocol. These
+  power the **CoralOS round** (`examples/txodds/coral/` + `coral-agents/`): the buyer/seller agents that
+  trade the edge over coral-server. The web oracle doesn't need them; the multi-agent round does.
 
 ### The escrow contract — the settlement spine
 
@@ -142,9 +145,11 @@ so no human key gates settlement after funding. **Devnet only** — never put a 
 
 | Directory | Purpose |
 |-----------|---------|
-| `examples/txodds/` | the World Cup Oracle — `agent/` (the edge transform + escrow client), `server/` (proxy + mint), `web/` (React app), `escrow/` (the Anchor contract) |
+| `examples/txodds/` | the World Cup Oracle — `agent/` (edge transform + escrow/arbiter clients), `server/` (proxy + mint), `web/` (React board), `coral/` (the CoralOS round launcher), `escrow/` (the two Anchor programs) |
+| `coral-agents/` | the agents coral-server launches for the round — `buyer-agent`, `seller-agent` (+ the `seller-worldcup` persona) |
 | `packages/agent-runtime/` | the runtime — `llm/`, `solana/`, `coral/`, `market/` |
 | `scripts/` | `txodds.js` (`npm run dev`), `setup.js` (devnet wallets) |
+| `docker-compose.yml` | coral-server (the MCP coordinator) for the CoralOS round |
 
 ## Optional: Claude Code skills
 

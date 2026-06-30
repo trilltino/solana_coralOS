@@ -10,7 +10,9 @@ Oracle**. An LLM agent fetches verified, de-margined World Cup odds on devnet, t
 deposit→release through a Solana escrow contract (gated by a neutral arbiter). The stack is pure
 TypeScript end-to-end; the **only Rust is the escrow + arbiter Anchor programs**, the **settlement
 spine** (not optional). A forkable React dashboard renders the live board. The fastest way to see it:
-`npm run dev` brings up the data/escrow proxy + the web UI and opens the browser. **No Docker required.**
+`npm run dev` brings up the data/escrow proxy + the web UI and opens the browser (**no Docker**). A
+second, **multi-agent** view — the **CoralOS round** (`docker compose up -d coral` + `npm run coral`) —
+runs a buyer + seller agent trading the edge over coral-server (MCP), settling via the escrow on devnet.
 
 ## Repo Layout
 
@@ -61,7 +63,8 @@ cd examples/txodds && npm install && npm run typecheck && npm test   # incl. edg
 - **Solana** (`solana/`) — `connection.ts` (`solanaConnection`/`assertDevnet` guard) + `pay.ts`
   (`generatePaymentUrl`/`verifyPayment`/`signTransfer`/`loadKeypairB58`, reference-bound).
 - **CoralOS** (`coral/`) + **market** (`market/`) — an MCP client and the WANT/BID/AWARD protocol. Not
-  used by the single-agent oracle; the rails for a multi-agent market.
+  used by the single-agent web oracle; they power the **CoralOS round** (`coral-agents/` +
+  `examples/txodds/coral/`).
 
 ### examples/txodds — the World Cup Oracle
 
@@ -87,8 +90,9 @@ arbiter. Build with `anchor build`; the demo runs against the deployed ids. See 
 
 ## Key Constraints
 
-- **No Docker / coral-server** — the oracle is just the proxy + web. (The `coral/` runtime module still
-  speaks MCP if you grow this into a multi-agent market, but nothing here launches a coral-server.)
+- **Web demo: no Docker** (proxy + web). **CoralOS round: needs Docker** — `docker-compose.yml` runs
+  coral-server, which launches `coral-agents/` (buyer + seller) per session; `examples/txodds/coral/round.ts`
+  (`npm run coral`) is the launcher. The round settles via the base escrow (the web view adds the arbiter).
 - **Devnet only** — payment + escrow code build their `Connection` via `solanaConnection()`
   (`@pay/agent-runtime`), which throws on a mainnet RPC unless `ALLOW_MAINNET=1`; it defaults to
   `https://api.devnet.solana.com`. Never put a funded mainnet keypair in `.env`.
